@@ -20,4 +20,3 @@
 200 print "Part 1:"TW
 210 print "Part 2:"TR
 220 end
-230 END
