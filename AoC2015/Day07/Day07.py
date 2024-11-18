@@ -32,6 +32,8 @@ def resolveEntry(wd, entry):
 
     return r & 0xFFFF   
 
+
+#   ----- begin main program -----
 with open('puzzleinput.txt', 'r') as f:
     text_input = f.readlines()
 
