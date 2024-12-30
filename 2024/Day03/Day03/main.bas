@@ -28,60 +28,68 @@ fp=peek(rd+1)+peek(rd+2)*256   ' calculate the starting address of the file
 
 ' do... while fp != -1
 @readfile
-gosub @advtomul
-if fp = -1 then goto @p1done
+x%=peek(fp)
+if x%=26 then goto @p1done
+if x%=109 then gosub @isvalidmul
+fp=fp+1
 goto @readfile
 
 @p1done
 print "part 1: ";p1
 
+
+' reset the file pointer to the beginning
+fp=peek(rd+1)+peek(rd+2)*256
+en%=1   ' start enabled
+p1=0
+@scanp2
+x%=peek(fp)
+if x%=26 then goto @p2done
+if x%=109 and en%=1 then gosub @isvalidmul
+if x%=100 then gosub @isvaliddd
+fp=fp+1
+goto @scanp2
+
+@p2done
+print "Part 2: "; p1
+
 end
 
+@isvaliddd
+if peek(fp)=100 and peek(fp+1)=111 and peek(fp+2)=40 and peek(fp+3)=41 then fp=fp+3:en%=1:return
+if peek(fp)=100 and peek(fp+1)=111 and peek(fp+2)=110 and peek(fp+3)=39 and peek(fp+4)=116 and peek(fp+5)=40 and peek(fp+6)=41 then fp=fp+5:en%=0:return
+return
 
-
-
-
-@advtomul
-' advances FP to the next valid mul; if not found, sets fp to -1!
-' alternately, if we need to look for multiple things, might do mp for mul pointer..
-' m,u,l: 109, 117, 108; (,): 40,41; 0-9: 48-57; ',': 44; eof: 26
-' uses r/w: x%, i%, ta%(), fp
-' uses r: ml%
-
-x%=peek(fp)
-if x%=26 then fp=-1:return
-if x%<>109 then fp=fp+1:goto @advtomul  ' finds an 'm'
-ta%(0)=x%
-' ok, we can go past the end of the file, but this won't actually make an error
-' sloppy on most machines, but fine on the M100. There is a non-zero but very small
-' chance this will have a false-positive. 
+@isvalidmul
+' uses r/w: ta%, i%, x1, x2, p1, fp
+' uses r  : ml%
+REM starting: fp points at an 'm'
+ta%(0)=peek(fp)
 for i%=1 to 3: ta%(i%)=peek(fp+i%) : next
-if ta%(0)<>ml%(0) or ta%(1)<>ml%(1) or ta%(2)<>ml%(2) or ta%(3)<>ml%(3) then fp=fp+1:goto @advtomul
-' next byte should be a digit(s) then comma then digit(s) then )
+' see if starts with mul(
+if ta%(0)<>109 or ta%(1)<>117 or ta%(2)<>108 or ta%(3)<>40 then return
+fp=fp+4 : REM advance to putative digit
 i%=0
 x1=0 ' first multiplicand
 x2=0 ' second multiplicand
-@am_readfirstnum
-x%=peek(fp+4+i%)
-if x%>=48 and x%<=57 then x1=x1*10+x%-48: i%=i%+1:goto @am_readfirstnum
-if x%=44 and i%>0 then goto @am_readnextnum
-fp=fp+1:goto @advtomul
+@ivm_readfirstnum
+x%=peek(fp+i%)
+if x%>=48 and x%<=57 then x1=x1*10+x%-48: i%=i%+1:goto @ivm_readfirstnum
+if x%=44 and i%>0 then goto @ivm_readnextnum
+REM not valid, return without further updating fp
+return 
 
-@am_readnextnum
+@ivm_readnextnum
 i%=i%+1  ' get past the comma
-x%=peek(fp+4+i%)
-if x% < 48 or x% > 57 then fp=fp+1:goto @advtomul else x2=x%-48
+x%=peek(fp+i%)
+if x% < 48 or x% > 57 then return else x2=x%-48
 i%=i%+1
-@am_rnn
-x%=peek(fp+4+i%)
-if x%>=48 and x%<=57 then x2=x2*10+x%-48 : i%=i%+1:goto @am_rnn
-if x%<>41 then fp=fp+1:goto @advtomul  ' sooo close, but no closing paren
-' if we get here, then we've actually found a valid mul and fp points to the start of it
-' perhaps we should just do the calculation as we find the numbers? 
-' could save off pointers to first num, comma, second num, paren? or first num, len, second num, len
-' then do the multiplication and place in a variable to be used in the main prog
+@ivm_rnn
+x%=peek(fp+i%)
+if x%>=48 and x%<=57 then x2=x2*10+x%-48 : i%=i%+1:goto @ivm_rnn
+if x%<>41 then return  
 p1 = p1 + x1*x2
-fp=fp+4+i%
+fp=fp+i%
 return
 
 ' DATA03DO

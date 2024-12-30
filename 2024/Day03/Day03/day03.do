@@ -20,49 +20,55 @@
 200 REM
 210 fp=peek(rd+1)+peek(rd+2)*256   ' calculate the starting address of the file
 220 ' do... while fp != -1
-230 gosub 280
-240 if fp = -1 then goto 260
-250 goto 230
-260 print "part 1: ";p1
-270 end
-280 ' advances FP to the next valid mul; if not found, sets fp to -1!
-290 ' alternately, if we need to look for multiple things, might do mp for mul pointer..
-300 ' m,u,l :  109, 117, 108; (,): 40,41; 0-9: 48-57; ',': 44; eof: 26
-310 ' uses r/w :  x%, i%, ta%(), fp
-320 ' uses r :  ml%
+230 x%=peek(fp)
+240 if x%=26 then goto 280
+250 if x%=109 then gosub 440
+260 fp=fp+1
+270 goto 230
+280 print "part 1: ";p1
+290 ' reset the file pointer to the beginning
+300 fp=peek(rd+1)+peek(rd+2)*256
+310 en%=1   ' start enabled
+320 p1=0
 330 x%=peek(fp)
-340 if x%=26 then fp=-1 : RETURN
-350 if x%<>109 then fp=fp+1 : goto 280  ' finds an 'm'
-360 ta%(0)=x%
-370 ' ok, we can go past the end of the file, but this won't actually make an error
-380 ' sloppy on most machines, but fine on the M100. There is a non-zero but very small
-390 ' chance this will have a false-positive.
-400 for i%=1 to 3 :  ta%(i%)=peek(fp+i%)  :  next
-410 if ta%(0)<>ml%(0) or ta%(1)<>ml%(1) or ta%(2)<>ml%(2) or ta%(3)<>ml%(3) then fp=fp+1 : goto 280
-420 ' next byte should be a digit(s) then comma then digit(s) then )
-430 i%=0
-440 x1=0 ' first multiplicand
-450 x2=0 ' second multiplicand
-460 x%=peek(fp+4+i%)
-470 if x%>=48 and x%<=57 then x1=x1*10+x%-48 :  i%=i%+1 : goto 460
-480 if x%=44 and i%>0 then goto 500
-490 fp=fp+1 : goto 280
-500 i%=i%+1  ' get past the comma
-510 x%=peek(fp+4+i%)
-520 if x% < 48 or x% > 57 then fp=fp+1 : goto 280 else x2=x%-48
-530 i%=i%+1
-540 x%=peek(fp+4+i%)
-550 if x%>=48 and x%<=57 then x2=x2*10+x%-48  :  i%=i%+1 : goto 540
-560 if x%<>41 then fp=fp+1 : goto 280  ' sooo close, but no closing paren
-570 ' if we get here, then we've actually found a valid mul and fp points to the start of it
-580 ' perhaps we should just do the calculation as we find the numbers?
-590 ' could save off pointers to first num, comma, second num, paren? or first num, len, second num, len
-600 ' then do the multiplication and place in a variable to be used in the main prog
-610 p1 = p1 + x1*x2
-620 fp=fp+4+i%
-630 RETURN
-640 ' DATA03DO
-650 data 68,65,84,65,48,51,68,79
-660 ' mul(
-670 data 109,117,108,40
-680 END
+340 if x%=26 then goto 390
+350 if x%=109 and en%=1 then gosub 440
+360 if x%=100 then gosub 410
+370 fp=fp+1
+380 goto 330
+390 print "Part 2: "; p1
+400 end
+410 if peek(fp)=100 and peek(fp+1)=111 and peek(fp+2)=40 and peek(fp+3)=41 then fp=fp+3 : en%=1 : RETURN
+420 if peek(fp)=100 and peek(fp+1)=111 and peek(fp+2)=110 and peek(fp+3)=39 and peek(fp+4)=116 and peek(fp+5)=40 and peek(fp+6)=41 then fp=fp+5 : en%=0 : RETURN
+430 RETURN
+440 ' uses r/w :  ta%, i%, x1, x2, p1, fp
+450 ' uses r   :  ml%
+460 REM starting :  fp points at an 'm'
+470 ta%(0)=peek(fp)
+480 for i%=1 to 3 :  ta%(i%)=peek(fp+i%)  :  next
+490 ' see if starts with mul(
+500 if ta%(0)<>109 or ta%(1)<>117 or ta%(2)<>108 or ta%(3)<>40 then return
+510 fp=fp+4  :  REM advance to putative digit
+520 i%=0
+530 x1=0 ' first multiplicand
+540 x2=0 ' second multiplicand
+550 x%=peek(fp+i%)
+560 if x%>=48 and x%<=57 then x1=x1*10+x%-48 :  i%=i%+1 : goto 550
+570 if x%=44 and i%>0 then goto 600
+580 REM not valid, return without further updating fp
+590 RETURN
+600 i%=i%+1  ' get past the comma
+610 x%=peek(fp+i%)
+620 if x% < 48 or x% > 57 then return else x2=x%-48
+630 i%=i%+1
+640 x%=peek(fp+i%)
+650 if x%>=48 and x%<=57 then x2=x2*10+x%-48  :  i%=i%+1 : goto 640
+660 if x%<>41 then return
+670 p1 = p1 + x1*x2
+680 fp=fp+i%
+690 RETURN
+700 ' DATA03DO
+710 data 68,65,84,65,48,51,68,79
+720 ' mul(
+730 data 109,117,108,40
+740 END
